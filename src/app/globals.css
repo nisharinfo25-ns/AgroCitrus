@@ -1,0 +1,134 @@
+/** Tailwind v4 theme tokens and base layer. */
+
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: oklch(0.97 0.02 145);
+  --color-brand-100: oklch(0.93 0.05 145);
+  --color-brand-200: oklch(0.87 0.08 145);
+  --color-brand-300: oklch(0.79 0.12 145);
+  --color-brand-400: oklch(0.70 0.15 145);
+  --color-brand-500: oklch(0.62 0.16 145);
+  --color-brand-600: oklch(0.53 0.14 145);
+  --color-brand-700: oklch(0.44 0.11 145);
+  --color-brand-800: oklch(0.36 0.08 145);
+  --color-brand-900: oklch(0.29 0.06 145);
+  --color-brand-950: oklch(0.18 0.04 145);
+
+  --color-citrus-50: oklch(0.98 0.03 95);
+  --color-citrus-100: oklch(0.95 0.07 95);
+  --color-citrus-200: oklch(0.91 0.12 95);
+  --color-citrus-300: oklch(0.86 0.15 90);
+  --color-citrus-400: oklch(0.82 0.17 85);
+  --color-citrus-500: oklch(0.78 0.17 80);
+  --color-citrus-600: oklch(0.70 0.16 70);
+
+  --color-ink-50: oklch(0.98 0.003 250);
+  --color-ink-100: oklch(0.95 0.005 250);
+  --color-ink-200: oklch(0.90 0.008 250);
+  --color-ink-300: oklch(0.82 0.011 250);
+  --color-ink-400: oklch(0.64 0.014 250);
+  --color-ink-500: oklch(0.52 0.016 250);
+  --color-ink-600: oklch(0.42 0.017 250);
+  --color-ink-700: oklch(0.34 0.018 250);
+  --color-ink-800: oklch(0.26 0.017 250);
+  --color-ink-900: oklch(0.20 0.015 250);
+  --color-ink-950: oklch(0.13 0.013 250);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", monospace;
+
+  --radius-card: 0.875rem;
+
+  --shadow-card: 0 1px 2px 0 rgb(13 20 32 / 0.04), 0 1px 3px 0 rgb(13 20 32 / 0.06);
+  --shadow-raised: 0 4px 6px -1px rgb(13 20 32 / 0.07), 0 2px 4px -2px rgb(13 20 32 / 0.05);
+  --shadow-overlay: 0 10px 15px -3px rgb(13 20 32 / 0.10), 0 4px 6px -4px rgb(13 20 32 / 0.10);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-ink-50 text-ink-800 antialiased;
+    font-family: var(--font-sans);
+  }
+
+  /* Visible, consistent focus for keyboard users only. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
+  }
+
+  ::selection {
+    @apply bg-brand-200 text-brand-950;
+  }
+
+  /* Respect users who prefer reduced motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* `card-interactive` is not a superset via `@apply card`: in Tailwind v4
+   * `@apply` only resolves real utilities, never a custom class defined in
+   * `@layer components`, and the build fails on the unknown utility. The shared
+   * surface is expressed as a grouped selector instead - same output, no
+   * duplicated declaration list to keep in sync. */
+  .card,
+  .card-interactive {
+    @apply rounded-[var(--radius-card)] border border-ink-200/80 bg-white shadow-[var(--shadow-card)];
+  }
+
+  .card-interactive {
+    @apply transition-shadow duration-200 hover:shadow-[var(--shadow-raised)];
+  }
+
+  /* Skeleton loader: a moving sheen, disabled under reduced motion. */
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-ink-200/70;
+  }
+
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full;
+    background-image: linear-gradient(
+      90deg,
+      rgb(255 255 255 / 0) 0%,
+      rgb(255 255 255 / 0.55) 50%,
+      rgb(255 255 255 / 0) 100%
+    );
+    animation: skeleton-sheen 1.6s infinite;
+  }
+
+  .prose-note {
+    @apply text-sm leading-relaxed text-ink-600;
+  }
+}
+
+@keyframes skeleton-sheen {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Hide scrollbars on horizontal filter strips while keeping them scrollable. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

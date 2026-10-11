@@ -1,0 +1,57 @@
+# ---------------------------------------------------------------------------
+# CitrusGuard dataset configuration
+#
+# Every value below is either (a) an observed, verified fact about the
+# publisher's archive or (b) an explicit environment override. Nothing here
+# is invented: the disease class list is NOT stored in this file - it is
+# discovered by walking the archive layout at download/verify time.
+# ---------------------------------------------------------------------------
+
+dataset:
+  # Human readable identifier stored in PostgreSQL `dataset_metadata.dataset_name`
+  name: citrus-fruits-leaves
+  # Mendeley Data version of the published record (v2).
+  version: "2"
+  # Public, credential-free download endpoint (returns application/zip).
+  source_url: https://data.mendeley.com/public-api/zip/3f83gxmv57/download/2
+  # Human-facing landing page, shown in the Admin > Dataset panel.
+  landing_page: https://data.mendeley.com/datasets/3f83gxmv57/2
+  # Publisher DOI.
+  doi: 10.17632/3f83gxmv57.2
+  license: CC BY 4.0
+  license_url: https://creativecommons.org/licenses/by/4.0
+  attribution: >-
+    Rauf, H. T., Saleem, B. A., Patel, H., & Aftab, S. (2019).
+    "A Citrus Fruits and Leaves Dataset for Detection and Classification of
+    Citrus Diseases through Machine Learning." Data in Brief.
+    Dataset published on Mendeley Data, version 2.
+  # The publisher serves a freshly-packaged zip on every request (the response
+  # is a redirect to a short-lived pre-signed S3 object), so the ARCHIVE bytes
+  # are NOT byte-stable and a pinned archive hash would fail spuriously.
+  # `CITRUSGUARD_DATASET_SHA256` is therefore treated as an OPTIONAL operator
+  # pin. When it is set it is enforced against the archive; when it is empty
+  # (the default) the pipeline verifies the CONTENT checksum instead, which is
+  # computed over the sorted (path, size, sha256) of every extracted image and
+  # is therefore deterministic for a given dataset build.
+  sha256: ""
+  # The publisher ships a zip that contains a single nested zip, so the
+  # extractor unwraps nested archives until it finds the class tree.
+  # Relative path of the class tree inside the (possibly nested) archive.
+  root_dir: Citrus
+  # Observed archive layout: <root_dir>/<part>/<class>/<image>
+  parts: [Leaves, Fruits]
+  # Directory names that are not class folders.
+  ignore_names: ["__MACOSX", ".DS_Store", "Thumbs.db"]
+  # Accepted image extensions. Anything else is reported as unsupported.
+  allowed_extensions: [".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"]
+  # Skip files smaller than this (bytes) - catches placeholder/truncated files.
+  min_file_bytes: 1024
+  # Fail verification when a class folder holds fewer images than this.
+  min_images_per_class: 5
+  # Transient network failures are retried this many times.
+  max_retries: 3
+  # Per-attempt HTTP timeout in seconds.
+  timeout_seconds: 300
+  # Where the persistent production copy lives in Supabase Storage.
+  storage_bucket: citrus-dataset
+  storage_prefix: citrus-fruits-leaves/v2

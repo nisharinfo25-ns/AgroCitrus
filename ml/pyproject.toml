@@ -1,0 +1,14 @@
+[project]
+name = "citrusguard-ml"
+version = "1.0.0"
+description = "CitrusGuard ML pipeline: dataset management, training, explainable inference."
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["citrusguard*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"

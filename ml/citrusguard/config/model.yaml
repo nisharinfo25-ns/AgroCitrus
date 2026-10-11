@@ -1,0 +1,182 @@
+# ---------------------------------------------------------------------------
+# CitrusGuard model configuration
+#
+# The architecture is a two-stage pipeline that mirrors the real dataset
+# layout (`Citrus/<Leaf|Fruit>/<disease|healthy>/`):
+#
+#   stage 1  `part`  -> Leaf vs Fruit        (trained on every image)
+#   stage 2  `leaf`  -> leaf disease classes (trained on Citrus/Leaves/**)
+#   stage 2  `fruit` -> fruit disease classes (trained on Citrus/Fruits/**)
+#
+# Class names are NEVER declared here. `citrusguard.dataset.validator` discovers
+# them from the archive and the training run writes them into the exported
+# model config, which is the single source of truth for the web app.
+# ---------------------------------------------------------------------------
+
+model:
+  name: citrusguard-cnn
+  # Bumped by the export step on every training run; also stored in the DB.
+  version: v1
+  # Transfer learning on a frozen ImageNet backbone.
+  architecture: mobilenet_v2
+  input_size: [224, 224]
+  input_channels: 3
+  # ImageNet MobileNetV2 preprocessing, applied identically at train and
+  # inference time. Recorded in the export as `preprocessing_method`.
+  preprocessing_method: mobilenet_v2_imagenet
+  seed: 1337
+  weights: imagenet
+
+training:
+  # The published dataset is small (759 images across 10 leaf/fruit classes), so
+  # the schedule is sized for CPU training. Raise `epochs` on a GPU host.
+  #
+  # 40 rather than 30 because the fine-tune phase now trains against
+  # inverse-frequency class weights: Melanose has 3 training images against
+  # Greening's 137, and those rare classes need more passes before the weighted
+  # gradients settle. Early stopping still ends the run early when it has
+  # converged.
+  epochs: 40
+  batch_size: 16
+  # Stratified, deterministic split of the discovered per-part class folders.
+  split:
+    train: 0.70
+    validation: 0.15
+    test: 0.15
+  # Head is trained first with the backbone frozen, then the whole network is
+  # fine-tuned at a much lower learning rate.
+  head_epochs: 10
+  head_learning_rate: 0.001
+  finetune_learning_rate: 0.0001
+  # Augmentation is applied to the training split ONLY.
+  augmentation:
+    rotation_range_degrees: 20
+    width_shift_range: 0.10
+    height_shift_range: 0.10
+    zoom_range: 0.10
+    horizontal_flip: true
+    brightness_range: [0.85, 1.15]
+  early_stopping:
+    monitor: val_loss
+    patience: 12
+    restore_best_weights: true
+  reduce_lr_on_plateau:
+    monitor: val_loss
+    factor: 0.5
+    patience: 5
+    min_learning_rate: 0.00001
+
+# ---------------------------------------------------------------------------
+# Inference gates. Surfaced in the UI; the same numbers are returned by the
+# predictor so the frontend never hardcodes them.
+# ---------------------------------------------------------------------------
+inference:
+  # Below this top-1 probability the result is surfaced as low confidence.
+  min_confidence: 0.55
+  # Minimum probability required to trust the Leaf-vs-Fruit stage and
+  # therefore to report an input type.
+  min_part_confidence: 0.50
+  image_quality:
+    # Variance of the Laplacian, computed on a fixed `sharpness_working_size`
+    # working copy of the grayscale image.
+    #
+    # The working size exists because raw Laplacian variance is NOT
+    # resolution-independent. Measured on this dataset, one photo scored 11.7 at
+    # 1024px and 209.7 at 224px - an 18x swing from downscaling alone. A fixed
+    # threshold on the raw value therefore measures the upload resolution rather
+    # than the focus, and calls the same image blurred at one size and sharp at
+    # another. At a fixed working size the value is identical at every size.
+    sharpness_working_size: 512
+    #
+    # 2.0 is MEASURED, not chosen for looks. Run `scripts/calibrate-sharpness.py`
+    # to reproduce: it drives `assess_image` over all 759 published images at this
+    # working size and reports the distribution and the pass rate per candidate.
+    #
+    # Measured distribution (n=759): min 1.60 / p05 2.95 / p10 3.36 / median 5.21
+    # / p75 8.07 / p90 80.31 / max 613.88.
+    #
+    # The distribution is strongly BIMODAL, split by plant part, not by focus:
+    #
+    #   Leaves  median 3.77 - 6.50   (mostly 256x256 photos, low edge energy)
+    #   Fruits  median 25.6 - 126.4  (large high-texture fruit close-ups)
+    #
+    # So a single global cutoff cannot separate "blurry" from "sharp" across both
+    # parts. The previous value of 5.0 rejected 351 of the 759 published images
+    # (46%), including 349 of 609 perfectly legible leaf photos - the model had
+    # been trained on images the deployed gate then refused. That is the failure
+    # this number fixes.
+    #
+    # At 2.0 the rejected set is exactly the 2 least-detailed images in the
+    # dataset. Read this as a floor for *unusable* uploads - a black frame, a
+    # severe motion-blurred snapshot, an extreme downscale - and NOT as a focus
+    # adjudicator. Judging borderline sharpness needs a texture-normalised
+    # metric and is not implemented. `min_dimension` is what catches genuinely
+    # small uploads.
+    min_sharpness: 2.0
+    # Mean luma bounds (0-255).
+    min_brightness: 22.0
+    max_brightness: 242.0
+    min_std_brightness: 12.0
+    # Reject anything below this on the longest edge.
+    min_dimension: 96
+    # Reject anything above this on the longest edge (decompression guard).
+    max_dimension: 12000
+
+# ---------------------------------------------------------------------------
+# Stage 1: an explicit Leaf-vs-Fruit PART ROUTER.
+#
+# This is a real, trained binary classifier - not a heuristic. The previous
+# pipeline had no stage 1 at all: it ran BOTH disease heads and routed by
+# whichever produced the larger peak softmax. Those two numbers are not
+# comparable (different label spaces, different training-set sizes), and the
+# leaf head - trained on 4x more images and therefore systematically sharper -
+# won for most fruit photographs. Measured on the held-out fruit test split,
+# 12 of 20 fruit images were routed to the leaf head, so the fruit disease
+# model was never even asked the question.
+#
+# The router is trained on EVERY image in the split, labelled by the dataset's
+# own part folders (Leaves/ vs Fruits/), so it learns the visual difference
+# between a leaf and a fruit directly rather than inferring it from disease
+# scores.
+# ---------------------------------------------------------------------------
+routing:
+  enabled: true
+  # Output index order. Written into the exported config.json at train time;
+  # inference reads it from there and never assumes the order.
+  classes: ["leaf", "fruit"]
+  # Stage 1 only has to separate two visually very different subjects, so the
+  # schedule is shorter than a disease head's. Same two-phase procedure,
+  # same class weighting, same augmentation, same seed.
+  head_epochs: 8
+  finetune_epochs: 15
+  # Minimum top-1 router probability required to TRUST the part decision.
+  #
+  # 0.95 is pre-registered here, a priori, for a 2-class softmax (whose output
+  # is always >= 0.50, so anything at or below 0.50 could never fire). It is
+  # deliberately NOT fitted to the test split: `citrusguard model evaluate`
+  # reports the measured coverage and selective accuracy at this threshold on
+  # the validation and test splits, plus a sweep over 0.50-0.99, so the choice
+  # can be audited and re-chosen with evidence rather than tuned to a result.
+  # Below it the pipeline refuses to classify and returns `routing_uncertain`
+  # instead of guessing a model.
+  min_confidence: 0.95
+
+# ---------------------------------------------------------------------------
+# Model packaging / promotion
+# ---------------------------------------------------------------------------
+export:
+  # Keras artifact + sidecar config, both uploaded to Supabase Storage.
+  bucket: trained-models
+  versions_prefix: versions
+  production_prefix: production
+  artifact_name: model.keras
+  config_name: config.json
+  # Severity head is intentionally NOT trained: the published dataset carries
+  # no severity labels, so `severity_support.enabled` stays false and the UI
+  # renders "Severity analysis is not available for this model."
+  severity_support:
+    enabled: false
+    reason: >-
+      The published dataset has no severity labels (no early/moderate/severe
+      annotations), so a severity model would have to be invented. The pipeline
+      and the database column exist so one can be trained later.
