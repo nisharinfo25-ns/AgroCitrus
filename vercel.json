@@ -1,0 +1,18 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci",
+  "outputDirectory": ".next",
+  "regions": ["sin1"],
+  "functions": {
+    "src/app/api/predict/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/model/**": {
+      "maxDuration": 30
+    },
+    "src/app/api/dataset/**": {
+      "maxDuration": 30
+    }
+  }
+}
