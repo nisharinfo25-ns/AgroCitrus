@@ -1,0 +1,23 @@
+# ---------------------------------------------------------------------------
+# CitrusGuard - Python / ML requirements
+#
+#   python -m pip install -r requirements.txt
+#
+# TensorFlow is pinned to the 2.15 line because it is the last release that
+# ships a Windows wheel for CPython 3.10 and keeps a NumPy 1.x ABI, which is
+# what OpenCV/scikit-learn are built against on this platform.
+# ---------------------------------------------------------------------------
+tensorflow==2.15.0
+tensorflow-cpu==2.15.0; platform_system != "Windows"
+numpy==1.26.4
+opencv-python==4.10.0.84
+pandas==2.2.3
+scikit-learn==1.5.2
+matplotlib==3.9.2
+PyYAML==6.0.2
+Pillow==10.4.0
+requests==2.32.3
+supabase==2.9.0
+python-dotenv==1.0.1
+tqdm==4.67.1
+pytest==8.3.4
