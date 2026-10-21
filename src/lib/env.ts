@@ -9,10 +9,13 @@
 
 import "server-only";
 
+import { AppError } from "@/lib/errors";
+
 /** Thrown when a server-only secret is touched from the browser. */
-export class ServerOnlyViolation extends Error {
+export class ServerOnlyViolation extends AppError {
   constructor(name: string) {
     super(
+      "forbidden",
       `Attempted to read the server-only environment variable ${name} from the browser. ` +
         `Only NEXT_PUBLIC_* values may be exposed to the client.`,
     );
@@ -20,9 +23,9 @@ export class ServerOnlyViolation extends Error {
   }
 }
 
-export class MissingEnvError extends Error {
+export class MissingEnvError extends AppError {
   constructor(name: string, hint: string) {
-    super(`Missing required environment variable ${name}. ${hint}`);
+    super("config_error", `Missing required environment variable ${name}. ${hint}`);
     this.name = "MissingEnvError";
   }
 }

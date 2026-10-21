@@ -95,8 +95,12 @@ export function fail(error: unknown, scope = "api"): NextResponse {
   }
 
   serverLog(scope, "Unhandled error", error);
+  const message =
+    error instanceof Error && error.message
+      ? error.message
+      : "Something went wrong. Please try again.";
   return NextResponse.json(
-    { error: { code: "internal_error", message: "Something went wrong. Please try again." } },
+    { error: { code: "internal_error", message } },
     { status: 500 },
   );
 }

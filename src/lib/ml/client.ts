@@ -374,11 +374,18 @@ export interface ModelBundleHandle {
  * Ensure the production model artifact is present locally, pulling it from
  * Supabase Storage when the cache is cold (which is always, on serverless).
  */
+export function getModelCacheDir(): string {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return join(tmpdir(), "citrusguard", "models");
+  }
+  return resolve(repoRoot(), APP_CONFIG.modelCacheDir);
+}
+
 export async function ensureProductionBundle(
   supabase: { storage: { from(bucket: string): any } },
   options: { expectedVersion?: string | null; expectedChecksum?: string | null } = {},
 ): Promise<ModelBundleHandle> {
-  const cacheRoot = resolve(repoRoot(), APP_CONFIG.modelCacheDir);
+  const cacheRoot = getModelCacheDir();
   const configPath = join(cacheRoot, "config.json");
 
   if (existsSync(configPath)) {
