@@ -38,8 +38,13 @@ function read(name: string): string | undefined {
       return process.env.NEXT_PUBLIC_SUPABASE_URL;
     case "NEXT_PUBLIC_SUPABASE_ANON_KEY":
       return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    case "SUPABASE_SERVICE_ROLE_KEY":
-      return process.env.SUPABASE_SERVICE_ROLE_KEY;
+    case "SUPABASE_SERVICE_ROLE_KEY": {
+      const raw =
+        process.env.SUPABASE_SERVICE_ROLE_KEY ||
+        process.env.SUPABASE_SERVICE_KEY ||
+        process.env.SERVICE_ROLE_KEY;
+      return raw ? raw.trim().replace(/^["']|["']$/g, "") : undefined;
+    }
     case "SUPABASE_URL":
       return process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
     case "CITRUSGUARD_PYTHON":
