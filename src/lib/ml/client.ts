@@ -411,9 +411,39 @@ export async function ensureProductionBundle(
     }
   }
 
+// ---------------------------------------------------------------------------
+// Helper: download a Supabase Storage object and return a Buffer
+//
+// supabase-storage-js changed its return shape between major versions:
+//   Old (<=1.x): bucket.download() resolved to a raw Blob | ArrayBuffer.
+//   New (>=2.x): bucket.download() resolves to { data: Blob, error: ... }.
+// Both shapes must be handled so the code works regardless of what is installed.
+// ---------------------------------------------------------------------------
+async function downloadToBuffer(
+  bucket: any,
+  path: string,
+): Promise<Buffer | null> {
+  const raw = await bucket.download(path).catch(() => null);
+  if (!raw) return null;
+
+  // New API: { data: Blob | null, error: ... }
+  const blob: Blob | null | undefined =
+    raw && typeof raw === "object" && "data" in raw ? raw.data : (raw as Blob | null);
+
+  if (!blob) return null;
+
+  // arrayBuffer() exists on Blob (Node 18+) and on the Web API Blob polyfill.
+  if (typeof (blob as any).arrayBuffer === "function") {
+    return Buffer.from(await (blob as any).arrayBuffer());
+  }
+  // Legacy: already an ArrayBuffer.
+  return Buffer.from(blob as unknown as ArrayBuffer);
+}
+
+
   const bucket = supabase.storage.from(BUCKETS.models);
-  const configBlob = await bucket.download("production/config.json").catch(() => null);
-  if (!configBlob) {
+  const configBuffer = await downloadToBuffer(bucket, "production/config.json");
+  if (!configBuffer) {
     const localProdDir = resolve(repoRoot(), "models/production");
     const localProdConfigPath = join(localProdDir, "config.json");
     if (existsSync(localProdConfigPath)) {
@@ -449,26 +479,25 @@ export async function ensureProductionBundle(
     );
   }
 
-  const manifest = JSON.parse(Buffer.from(configBlob as ArrayBuffer).toString("utf8")) as {
+  const manifest = JSON.parse(configBuffer.toString("utf8")) as {
     model_version?: string;
     model_checksum?: string;
     artifacts?: Record<string, string>;
   };
 
   await mkdir(cacheRoot, { recursive: true });
-  await writeFile(configPath, Buffer.from(configBlob as ArrayBuffer));
+  await writeFile(configPath, configBuffer);
 
   for (const filename of Object.values(manifest.artifacts ?? {})) {
-    const blob = await bucket.download(`production/${filename}`).catch(() => null);
-    if (!blob) {
+    const fileBuffer = await downloadToBuffer(bucket, `production/${filename}`);
+    if (!fileBuffer) {
       await rm(cacheRoot, { recursive: true, force: true });
       throw new AppError(
         "model_not_configured",
         `The production model bundle is incomplete (missing ${filename}). Deploy a complete version from the admin panel.`,
       );
     }
-    const buffer = Buffer.from(blob as ArrayBuffer);
-    await writeFile(join(cacheRoot, filename), buffer);
+    await writeFile(join(cacheRoot, filename), fileBuffer);
   }
 
   return {
