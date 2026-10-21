@@ -93,11 +93,15 @@ export function serverEnvNumber(name: string, fallback: number, opts: { min?: nu
 // Public (client-safe) configuration
 // --------------------------------------------------------------------------
 
+const DEFAULT_SUPABASE_URL = "https://eczfukabevxcpdbolowm.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjemZ1a2FiZXZ4Y3BkYm9sb3dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MTExMjcsImV4cCI6MjEwODA4NzEyN30.Nq9kS4PAiqodcEVHjLkEY4y58yTSmIIujwN6Rt9fM2U";
+
 export const PUBLIC_SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "https://eczfukabevxcpdbolowm.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || DEFAULT_SUPABASE_URL;
 
 export const PUBLIC_SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || DEFAULT_SUPABASE_ANON_KEY;
 
 /** True when the app has enough configuration to talk to Supabase at all. */
 export const isSupabaseConfigured = PUBLIC_SUPABASE_URL.length > 0 && PUBLIC_SUPABASE_ANON_KEY.length > 0;

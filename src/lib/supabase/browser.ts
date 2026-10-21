@@ -39,8 +39,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export type Database = any; // generated types would be produced by `supabase gen types`
 
 /** Inlined at build time. Safe to expose: these are the public project settings. */
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const DEFAULT_SUPABASE_URL = "https://eczfukabevxcpdbolowm.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjemZ1a2FiZXZ4Y3BkYm9sb3dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MTExMjcsImV4cCI6MjEwODA4NzEyN30.Nq9kS4PAiqodcEVHjLkEY4y58yTSmIIujwN6Rt9fM2U";
+
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || DEFAULT_SUPABASE_URL).trim();
+const SUPABASE_ANON_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || DEFAULT_SUPABASE_ANON_KEY).trim();
 
 type ClientGlobal = typeof globalThis & {
   __citrusguardSupabaseBrowserClient?: SupabaseClient<Database>;
