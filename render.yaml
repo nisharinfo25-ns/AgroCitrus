@@ -5,7 +5,7 @@ services:
     region: singapore
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT --app-dir ml
+    startCommand: python ml/api.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.14

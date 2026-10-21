@@ -62,16 +62,22 @@ def get_bundle_dir() -> Path:
     return cache_dir
 
 
+import threading
+
 @app.on_event("startup")
 def startup_event():
-    """Pre-warm model bundle into RAM on startup."""
-    try:
-        bundle_dir = get_bundle_dir()
-        log.info("Pre-warming model bundle from %s...", bundle_dir)
-        load_bundle_cached(bundle_dir)
-        log.info("Model bundle loaded and warmed successfully.")
-    except Exception as exc:
-        log.warning("Could not pre-warm model bundle on startup: %s", exc)
+    """Start model download and pre-warming in a background thread so port binds immediately."""
+    def _bg_warmup():
+        try:
+            bundle_dir = get_bundle_dir()
+            log.info("Background pre-warming model bundle from %s...", bundle_dir)
+            load_bundle_cached(bundle_dir)
+            log.info("Model bundle loaded and warmed successfully.")
+        except Exception as exc:
+            log.warning("Background model warmup error: %s", exc)
+
+    thread = threading.Thread(target=_bg_warmup, daemon=True)
+    thread.start()
 
 
 @app.get("/")
@@ -192,3 +198,10 @@ async def predict_json(req: PredictJsonRequest):
                 "message": f"Inference failed: {str(exc)}",
             },
         }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 10000))
+    log.info("Starting CitrusGuard ML API on port %s", port)
+    uvicorn.run("api:app", host="0.0.0.0", port=port, app_dir="ml")
