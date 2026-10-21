@@ -26,7 +26,7 @@ from ..common.paths import get_logger
 from ..config.loader import model_config
 from ..dataset.preprocessor import decode_image, preprocess_for_inference
 from . import gradcam as gradcam_mod
-from .image_quality import QualityReport, assess_image
+from .image_quality import QualityReport, analyse as analyse_quality, assess_image
 
 log = get_logger("inference.predictor")
 
@@ -428,7 +428,7 @@ def predict_image(
         preprocessing_method=bundle.preprocessing_method,
     )
     original = decode_image(image_source)
-    quality = quality_report or assess_image(original)
+    quality = quality_report or analyse_quality(original)
 
     # ---- stage 1: Leaf vs Fruit --------------------------------------- #
     # Preferred path: a DEDICATED binary router trained on every image in the
@@ -605,6 +605,20 @@ def predict_image(
             zip(selected_classes, disease_probs[0]), key=lambda pair: pair[1], reverse=True
         )
     ]
+
+    all_scores_str = ", ".join(f"{c}: {p:.4f}" for c, p in zip(selected_classes, disease_probs[0]))
+    log.info(
+        "Inference diagnostics: bundle_version=%s head=%s input_shape=%s prep=%s "
+        "pred_idx=%d pred_class=%s conf=%.4f scores=[%s]",
+        bundle.version,
+        selected_key,
+        batch.shape,
+        bundle.preprocessing_method,
+        best_index,
+        predicted_raw,
+        confidence,
+        all_scores_str,
+    )
 
     # ---- explainability -------------------------------------------------- #
     gradcam_payload: dict[str, Any] | None = None

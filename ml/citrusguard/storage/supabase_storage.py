@@ -45,7 +45,7 @@ def _require_url() -> str:
     url = (
         os.getenv("SUPABASE_URL")
         or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
-        or "https://bpmoafdikilbpcxbbmyi.supabase.co"
+        or "https://eczfukabevxcpdbolowm.supabase.co"
     ).strip()
     if not url:
         raise StorageError("SUPABASE_URL is not set.")

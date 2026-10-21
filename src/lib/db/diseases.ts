@@ -87,7 +87,7 @@ function fromRow(row: DiseaseInformation): GuideEntry {
     symptoms: row.symptoms ?? [],
     prevention: row.prevention ?? [],
     management: row.management ?? [],
-    references: row.references ?? [],
+    references: row.reference_sources ?? row.references ?? [],
     content_complete: row.content_complete,
     updated_at: row.updated_at,
     source: "database",

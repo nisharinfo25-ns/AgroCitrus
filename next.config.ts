@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   // `sharp` is optional; Next falls back to its WASM build if unavailable.
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "bpmoafdikilbpcxbbmyi.supabase.co" },
+      { protocol: "https", hostname: "eczfukabevxcpdbolowm.supabase.co" },
       { protocol: "https", hostname: "*.supabase.co" },
     ],
   },

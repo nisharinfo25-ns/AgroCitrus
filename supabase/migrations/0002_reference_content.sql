@@ -18,7 +18,7 @@
 --   * treatment decisions explicitly deferred to a local expert.
 -- ---------------------------------------------------------------------
 insert into public.disease_information
-  (slug, display_name, applies_to, is_healthy, short_description, symptoms, prevention, management, references)
+  (slug, display_name, applies_to, is_healthy, short_description, symptoms, prevention, management, reference_sources)
 values
   (
     'black-spot',
@@ -220,7 +220,7 @@ set display_name    = excluded.display_name,
     symptoms        = excluded.symptoms,
     prevention      = excluded.prevention,
     management      = excluded.management,
-    references      = excluded.references,
+    reference_sources = excluded.reference_sources,
     updated_at      = now();
 
 -- ---------------------------------------------------------------------
@@ -236,7 +236,10 @@ as $$
   select
     c.slug,
     exists (
-      select 1 from public.disease_information d where d.slug = c.slug
+      select 1 from public.disease_information d
+      where d.slug = c.slug
+         or d.slug = lower(replace(c.slug, ' ', '-'))
+         or lower(d.display_name) = lower(c.slug)
     ) as has_content
   from (
     select unnest(coalesce(classes, '{}'::text[])) as slug

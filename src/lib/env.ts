@@ -94,7 +94,7 @@ export function serverEnvNumber(name: string, fallback: number, opts: { min?: nu
 // --------------------------------------------------------------------------
 
 export const PUBLIC_SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "https://bpmoafdikilbpcxbbmyi.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "https://eczfukabevxcpdbolowm.supabase.co";
 
 export const PUBLIC_SUPABASE_ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";

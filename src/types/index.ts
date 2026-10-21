@@ -108,7 +108,8 @@ export interface DiseaseInformation {
   symptoms: string[];
   prevention: string[];
   management: string[];
-  references: string[];
+  reference_sources: string[];
+  references?: string[];
   content_complete: boolean;
   created_at: string;
   updated_at: string;

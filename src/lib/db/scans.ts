@@ -186,17 +186,11 @@ export async function listScans(supabase: ScopedClient, params: ListScansParams 
 
   const { data, error, count } = await query;
   if (error) {
-    serverLog("scans", "list failed", error);
-    // A missing/unmigrated `scans` table is a deployment state, not a user
-    // problem, and must not 500 the page: the history list has a legitimate
-    // empty state ("No scans yet"), and a user with zero scans is
-    // indistinguishable from a user whose table could not be read. Throwing
-    // here left /scans returning HTTP 500 for a signed-in user with nothing to
-    // show. Any *other* error is still a real fault and still throws.
     if (isMissingSchemaError(error)) {
-      serverLog("scans", describeDbError("list failed", error));
+      serverLog("scans", describeDbError("list scans: database schema is not applied yet", error));
       return { scans: [], total: 0, page, pageSize, totalPages: 1 };
     }
+    serverLog("scans", "list failed", error);
     throw new AppError("storage_error", "Your scan history could not be loaded.");
   }
 

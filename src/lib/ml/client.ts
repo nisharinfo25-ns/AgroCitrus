@@ -19,7 +19,7 @@ import "server-only";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -407,6 +407,35 @@ export async function ensureProductionBundle(
   const bucket = supabase.storage.from(BUCKETS.models);
   const configBlob = await bucket.download("production/config.json").catch(() => null);
   if (!configBlob) {
+    const localProdDir = resolve(repoRoot(), "models/production");
+    const localProdConfigPath = join(localProdDir, "config.json");
+    if (existsSync(localProdConfigPath)) {
+      try {
+        const localManifest = JSON.parse(await readFile(localProdConfigPath, "utf8")) as {
+          model_version?: string;
+          model_checksum?: string;
+          artifacts?: Record<string, string>;
+        };
+        if (
+          (!options.expectedVersion || localManifest.model_version === options.expectedVersion) &&
+          (!options.expectedChecksum || localManifest.model_checksum === options.expectedChecksum)
+        ) {
+          await mkdir(cacheRoot, { recursive: true });
+          await copyFile(localProdConfigPath, configPath);
+          for (const filename of Object.values(localManifest.artifacts ?? {})) {
+            await copyFile(join(localProdDir, filename), join(cacheRoot, filename));
+          }
+          return {
+            dir: cacheRoot,
+            version: localManifest.model_version ?? "unknown",
+            checksum: localManifest.model_checksum ?? null,
+          };
+        }
+      } catch (err) {
+        serverLog("ml", "Failed to seed model cache from models/production", err);
+      }
+    }
+
     throw new AppError(
       "model_not_configured",
       "Model is not configured. No production model has been deployed to Supabase Storage yet.",

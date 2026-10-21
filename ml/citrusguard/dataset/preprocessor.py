@@ -30,11 +30,17 @@ except ModuleNotFoundError as exc:  # pragma: no cover
 _DECODE_FLAGS = cv2.IMREAD_UNCHANGED
 
 
-def decode_image(source: str | Path | bytes) -> np.ndarray:
+def decode_image(source: str | Path | bytes | np.ndarray) -> np.ndarray:
     """Decode an image file to an RGB uint8 array.
 
     Raises :class:`ImageValidationError` for unreadable or non-image input.
     """
+    if isinstance(source, np.ndarray):
+        if source.ndim == 3 and source.shape[2] == 3 and source.dtype == np.uint8:
+            return source
+        if source.ndim == 3 and source.shape[2] == 4:
+            return cv2.cvtColor(source, cv2.COLOR_RGBA2RGB)
+        return source.astype(np.uint8)
     if isinstance(source, (bytes, bytearray)):
         buffer = np.frombuffer(bytes(source), dtype=np.uint8)
         if buffer.size == 0:

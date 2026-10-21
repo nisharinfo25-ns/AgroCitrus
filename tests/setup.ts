@@ -6,7 +6,7 @@
  * `.env.local` and in CI that does not.
  */
 
-process.env.NEXT_PUBLIC_SUPABASE_URL ??= "https://bpmoafdikilbpcxbbmyi.supabase.co";
+process.env.NEXT_PUBLIC_SUPABASE_URL ??= "https://eczfukabevxcpdbolowm.supabase.co";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "test-anon-key";
 
 // Deliberately NOT set: SUPABASE_SERVICE_ROLE_KEY. Most tests exercise the

@@ -205,7 +205,7 @@ create table public.disease_information (
   symptoms      text[] not null default '{}',
   prevention    text[] not null default '{}',
   management    text[] not null default '{}',
-  references    text[] not null default '{}',
+  reference_sources text[] not null default '{}',
   -- Free-form "not available yet" reasons for guidance we do not have.
   content_complete boolean not null default true,
   created_at    timestamptz not null default now(),

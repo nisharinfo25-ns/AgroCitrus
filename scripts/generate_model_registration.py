@@ -298,6 +298,7 @@ insert into public.model_versions (
   part_summary, severity_support, training_report_path, status, notes
 ) values (
 """
+        % (q(bundle["model_name"]), q(version))
     )
     seed.write("  %s,\n" % q(bundle["model_name"]))
     seed.write("  %s,\n" % q(version))

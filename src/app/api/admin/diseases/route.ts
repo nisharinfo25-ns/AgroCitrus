@@ -103,7 +103,15 @@ export async function POST(request: NextRequest) {
       .from("disease_information")
       .upsert(
         {
-          ...body,
+          slug: body.slug,
+          display_name: body.display_name,
+          applies_to: body.applies_to,
+          is_healthy: body.is_healthy,
+          short_description: body.short_description,
+          symptoms: body.symptoms,
+          prevention: body.prevention,
+          management: body.management,
+          reference_sources: body.references,
           content_complete:
             body.symptoms.length > 0 && body.prevention.length > 0 && body.management.length > 0,
         },

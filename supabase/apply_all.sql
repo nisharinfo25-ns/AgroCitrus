@@ -228,7 +228,7 @@ create table public.disease_information (
   symptoms      text[] not null default '{}',
   prevention    text[] not null default '{}',
   management    text[] not null default '{}',
-  references    text[] not null default '{}',
+  reference_sources text[] not null default '{}',
   -- Free-form "not available yet" reasons for guidance we do not have.
   content_complete boolean not null default true,
   created_at    timestamptz not null default now(),
@@ -463,7 +463,7 @@ $$;
 --   * treatment decisions explicitly deferred to a local expert.
 -- ---------------------------------------------------------------------
 insert into public.disease_information
-  (slug, display_name, applies_to, is_healthy, short_description, symptoms, prevention, management, references)
+  (slug, display_name, applies_to, is_healthy, short_description, symptoms, prevention, management, reference_sources)
 values
   (
     'black-spot',
@@ -665,7 +665,7 @@ set display_name    = excluded.display_name,
     symptoms        = excluded.symptoms,
     prevention      = excluded.prevention,
     management      = excluded.management,
-    references      = excluded.references,
+    reference_sources = excluded.reference_sources,
     updated_at      = now();
 
 -- ---------------------------------------------------------------------
@@ -681,7 +681,10 @@ as $$
   select
     c.slug,
     exists (
-      select 1 from public.disease_information d where d.slug = c.slug
+      select 1 from public.disease_information d
+      where d.slug = c.slug
+         or d.slug = lower(replace(c.slug, ' ', '-'))
+         or lower(d.display_name) = lower(c.slug)
     ) as has_content
   from (
     select unnest(coalesce(classes, '{}'::text[])) as slug
@@ -1122,8 +1125,8 @@ update public.model_versions
    set status = 'candidate',
        promoted_at = null,
        updated_at = now()
- where model_name = %s
-   and version <> %s
+ where model_name = 'citrusguard-cnn'
+   and version <> 'v4'
    and status = 'production';
 
 insert into public.model_versions (
@@ -1133,11 +1136,11 @@ insert into public.model_versions (
   part_summary, severity_support, training_report_path, status, notes
 ) values (
   'citrusguard-cnn',
-  'v2',
+  'v4',
   (select id from public.dataset_metadata where dataset_name = 'citrus-fruits-leaves' and version = '2'),
   '2',
   'mobilenet_v2',
-  'versions/v2',
+  'versions/v4',
   array['Black Spot', 'Canker', 'Greening', 'Healthy', 'Melanose', 'Scab']::text[],
   '{
   "part_fruit": [
@@ -1157,18 +1160,18 @@ insert into public.model_versions (
 }'::jsonb,
   array[224, 224]::integer[],
   'mobilenet_v2_imagenet',
-  0.800000011920929,
-  0.7,
-  '8ee113fbf9b3277827fb77c62aa0fa8be07951d511956ada70245ffc92517f10',
-  '2026-10-04T07:09:35.427100+00:00',
+  0.8522727191448212,
+  0.7545454545454545,
+  '4474a031082f334735a592c658c6869a9b74447c459afe6c3c0b1aa7809b20b3',
+  '2026-10-11T13:39:59.738272+00:00',
   now(),
   '{
   "Fruits": {
-    "accuracy": 0.7,
-    "macro_precision": 0.44666666666666666,
-    "macro_recall": 0.5151515151515151,
-    "macro_f1": 0.4481987577639751,
-    "weighted_f1": 0.6554037267080746,
+    "accuracy": 0.6,
+    "macro_precision": 0.4205128205128205,
+    "macro_recall": 0.3484848484848485,
+    "macro_f1": 0.3466666666666667,
+    "weighted_f1": 0.5733333333333335,
     "test_images": 20,
     "per_class": {
       "Black Spot": {
@@ -1178,37 +1181,37 @@ insert into public.model_versions (
         "support": 2
       },
       "Canker": {
-        "precision": 0.8333333333333334,
+        "precision": 0.7692307692307693,
         "recall": 0.9090909090909091,
-        "f1_score": 0.8695652173913043,
+        "f1_score": 0.8333333333333334,
         "support": 11
       },
       "Greening (Huanglongbing)": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1_score": 0.0,
+        "precision": 0.3333333333333333,
+        "recall": 0.5,
+        "f1_score": 0.4,
         "support": 2
       },
       "Healthy": {
         "precision": 1.0,
-        "recall": 0.6666666666666666,
-        "f1_score": 0.8,
+        "recall": 0.3333333333333333,
+        "f1_score": 0.5,
         "support": 3
       },
       "Scab": {
-        "precision": 0.4,
-        "recall": 1.0,
-        "f1_score": 0.5714285714285714,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
         "support": 2
       }
     },
     "confusion_matrix": [
       [
         0,
-        1,
+        2,
         0,
         0,
-        1
+        0
       ],
       [
         1,
@@ -1220,51 +1223,51 @@ insert into public.model_versions (
       [
         0,
         0,
-        0,
-        0,
-        2
-      ],
-      [
-        0,
         1,
         0,
-        2,
+        1
+      ],
+      [
+        1,
+        1,
+        0,
+        1,
         0
       ],
       [
         0,
         0,
+        2,
         0,
-        0,
-        2
+        0
       ]
     ],
     "classes": null
   },
   "Leaves": {
     "accuracy": 0.9090909090909091,
-    "macro_precision": 0.9413898601398601,
-    "macro_recall": 0.9196666666666665,
-    "macro_f1": 0.9284868451155341,
-    "weighted_f1": 0.9089955491774298,
+    "macro_precision": 0.9416221033868093,
+    "macro_recall": 0.9183333333333333,
+    "macro_f1": 0.9277127659574468,
+    "weighted_f1": 0.90759389103804,
     "test_images": 88,
     "per_class": {
       "Black Spot": {
-        "precision": 0.9545454545454546,
-        "recall": 0.84,
-        "f1_score": 0.8936170212765957,
+        "precision": 0.9090909090909091,
+        "recall": 0.8,
+        "f1_score": 0.851063829787234,
         "support": 25
       },
       "Canker": {
-        "precision": 0.8461538461538461,
+        "precision": 0.9166666666666666,
         "recall": 0.9166666666666666,
-        "f1_score": 0.88,
+        "f1_score": 0.9166666666666666,
         "support": 24
       },
       "Greening (Huanglongbing)": {
-        "precision": 0.90625,
-        "recall": 0.9666666666666667,
-        "f1_score": 0.9354838709677419,
+        "precision": 0.8823529411764706,
+        "recall": 1.0,
+        "f1_score": 0.9375,
         "support": 30
       },
       "Healthy": {
@@ -1282,9 +1285,9 @@ insert into public.model_versions (
     },
     "confusion_matrix": [
       [
-        21,
+        20,
+        2,
         3,
-        1,
         0,
         0
       ],
@@ -1297,15 +1300,15 @@ insert into public.model_versions (
       ],
       [
         0,
-        1,
-        29,
+        0,
+        30,
         0,
         0
       ],
       [
-        0,
-        0,
         1,
+        0,
+        0,
         7,
         0
       ],
@@ -1326,7 +1329,7 @@ insert into public.model_versions (
 }'::jsonb,
   'reports/training-report.json',
   'production',
-  'Registered by scripts/generate_model_registration.py from the exported bundle at models/production/config.json. Artefacts: part_fruit=part_fruit.keras, part_leaf=part_leaf.keras. Per-part measured accuracy: Fruits=0.7, Leaves=0.9090909090909091. Mean test accuracy over 108 held-out images: 0.8045454545454545.'
+  'Registered by scripts/generate_model_registration.py from the exported bundle at models/production/config.json. Artefacts: part_fruit=part_fruit.keras, part_leaf=part_leaf.keras, part_router=part_router.keras. Per-part measured accuracy: Fruits=0.6, Leaves=0.9090909090909091. Mean test accuracy over 108 held-out images: 0.7545454545454545.'
 )
 on conflict (model_name, version) do update set
   dataset_id            = excluded.dataset_id,
