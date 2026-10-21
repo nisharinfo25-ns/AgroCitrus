@@ -29,7 +29,7 @@ import { assertSameOrigin, fail, ok, serverLog } from "@/lib/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 800;
+export const maxDuration = 300;
 
 const BodySchema = z.object({
   version: z
