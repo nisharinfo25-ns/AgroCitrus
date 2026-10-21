@@ -59,6 +59,8 @@ function read(name: string): string | undefined {
       return process.env.CITRUSGUARD_REPORT_DIR;
     case "CITRUSGUARD_PROJECT_ROOT":
       return process.env.CITRUSGUARD_PROJECT_ROOT;
+    case "CITRUSGUARD_INFERENCE_URL":
+      return process.env.CITRUSGUARD_INFERENCE_URL || process.env.CITRUSGUARD_ML_API_URL;
     default:
       return undefined;
   }
@@ -128,4 +130,5 @@ export const APP_CONFIG = {
   minConfidence: serverEnvNumber("CITRUSGUARD_MIN_CONFIDENCE", 0.55, { min: 0, max: 1 }),
   python: serverEnvOr("CITRUSGUARD_PYTHON", "python"),
   modelCacheDir: serverEnvOr("CITRUSGUARD_MODEL_CACHE_DIR", ".cache/citrusguard/models"),
+  inferenceUrl: serverEnvOr("CITRUSGUARD_INFERENCE_URL", "").replace(/\/+$/, ""),
 } as const;

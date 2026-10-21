@@ -24,7 +24,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth";
-import { BUCKETS } from "@/lib/env";
+import { APP_CONFIG, BUCKETS } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { insertScan } from "@/lib/db/scans";
 import { describeDbError, isMissingSchemaError } from "@/lib/db/schema";
@@ -116,24 +116,26 @@ export async function POST(request: Request) {
 
     // ---- 5 + 6. quality gate and inference -------------------------- //
     const admin = createAdminClient();
-    const bundle = await ensureProductionBundle(admin, {
-      expectedVersion: model.version,
-      expectedChecksum: model.model_checksum,
-    });
+    let bundleDir = "";
 
-    // Warm the long-lived inference server once per bundle. Consumer-side this
-    // is exactly the model-load a cold prediction would pay; the point is that
-    // every later request reuses it instead of paying it again. Loaded through
-    // the server so the cost is measured and attributed in one place.
-    const warmSeconds = await warmInferenceServer(bundle.dir);
-    if (warmSeconds !== null) {
-      serverLog("predict", `inference server warmed bundle ${bundle.version} in ${warmSeconds.toFixed(2)}s`);
+    if (!APP_CONFIG.inferenceUrl) {
+      const bundle = await ensureProductionBundle(admin, {
+        expectedVersion: model.version,
+        expectedChecksum: model.model_checksum,
+      });
+      bundleDir = bundle.dir;
+
+      // Warm the long-lived inference server once per bundle.
+      const warmSeconds = await warmInferenceServer(bundle.dir);
+      if (warmSeconds !== null) {
+        serverLog("predict", `inference server warmed bundle ${bundle.version} in ${warmSeconds.toFixed(2)}s`);
+      }
     }
 
     const outcome = await runPrediction({
       imageBytes: upload.bytes,
       extension: upload.extension,
-      bundleDir: bundle.dir,
+      bundleDir,
       enableGradCam: options.enable_gradcam,
       inputTypeHint: options.input_type_hint ?? null,
     });

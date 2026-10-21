@@ -57,6 +57,14 @@ function mlPackageDir(): string {
 let cachedPython: PythonAvailability | null = null;
 
 export async function checkPython(): Promise<PythonAvailability> {
+  if (APP_CONFIG.inferenceUrl) {
+    return {
+      available: true,
+      version: "remote",
+      message: "Remote ML inference service configured.",
+    };
+  }
+
   if (cachedPython) return cachedPython;
 
   const result = await runRaw(["--version"], 20_000);
@@ -581,7 +589,78 @@ async function invokeWorker(
  * to `scan-images` and only then are they gone - nothing depends on the
  * container's filesystem surviving, which is what makes this safe on serverless.
  */
+async function runRemotePrediction(options: PredictOptions): Promise<PredictOutcome> {
+  const url = `${APP_CONFIG.inferenceUrl}/predict`;
+  serverLog("ml", `calling remote inference service: ${url}`);
+
+  const formData = new FormData();
+  const blob = new Blob([new Uint8Array(options.imageBytes)], {
+    type: options.extension === "png" ? "image/png" : "image/jpeg",
+  });
+  formData.append("file", blob, `upload.${options.extension}`);
+  formData.append("enable_gradcam", options.enableGradCam ? "true" : "false");
+  if (options.inputTypeHint) {
+    formData.append("input_type_hint", options.inputTypeHint);
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    body: formData,
+    signal: AbortSignal.timeout(options.timeoutMs ?? 120_000),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    serverLog("ml", `remote inference error ${response.status}`, errorText);
+    throw new AppError(
+      "prediction_failed",
+      `Remote inference service returned HTTP ${response.status}. Please check service logs.`,
+    );
+  }
+
+  const data = (await response.json()) as {
+    ok: boolean;
+    result?: Record<string, unknown>;
+    error?: PredictOutcome["error"];
+    quality?: Record<string, unknown>;
+    artifacts?: {
+      processed_base64?: string | null;
+      heatmap_base64?: string | null;
+      overlay_base64?: string | null;
+    };
+  };
+
+  const toBuffer = (b64?: string | null): Buffer | null => {
+    if (!b64) return null;
+    try {
+      return Buffer.from(b64, "base64");
+    } catch {
+      return null;
+    }
+  };
+
+  const processedBuffer = toBuffer(data.artifacts?.processed_base64);
+  const heatmapBuffer = toBuffer(data.artifacts?.heatmap_base64);
+  const overlayBuffer = toBuffer(data.artifacts?.overlay_base64);
+
+  return {
+    ok: Boolean(data.ok),
+    payload: data.result ?? null,
+    error: data.error ?? null,
+    quality: data.quality ?? null,
+    artifacts: {
+      processed: processedBuffer ? { bytes: processedBuffer, extension: "png" } : null,
+      heatmap: heatmapBuffer,
+      overlay: overlayBuffer,
+    },
+  };
+}
+
 export async function runPrediction(options: PredictOptions): Promise<PredictOutcome> {
+  if (APP_CONFIG.inferenceUrl) {
+    return runRemotePrediction(options);
+  }
+
   const python = await checkPython();
   if (!python.available) {
     throw new AppError("model_not_configured", python.message);
